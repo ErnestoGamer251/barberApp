@@ -17,16 +17,35 @@ const usuarioSchema = new mongoose.Schema({
   },
   rol: {
     type: String,
-    enum: ['admin', 'peluquero'],
+    enum: ['peluquero', 'admin'],
     default: 'peluquero'
-  }
-}, { timestamps: true });
+  },
+  fotoPerfil: {
+    type: String,
+    default: null
+  },
+  resetPasswordToken: String,
+  resetPasswordExpires: Date
+}, {
+  timestamps: true
+});
 
-// Método para encriptar contraseña antes de guardar
+// Hash de contraseña antes de guardar
 usuarioSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
-  this.password = await bcrypt.hash(this.password, 10);
-  next();
+  
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error) {
+    next(error);
+  }
 });
+
+// Método para comparar contraseñas
+usuarioSchema.methods.comparePassword = async function(candidatePassword) {
+  return bcrypt.compare(candidatePassword, this.password);
+};
 
 module.exports = mongoose.model('Usuario', usuarioSchema); 
